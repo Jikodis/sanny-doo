@@ -57,8 +57,15 @@ Photo it on plain paper, copy it to `assets/source/`, add a function in
 3. **Playing it.** Nothing automated checks whether flying feels good or whether Sam
    likes it. That is the real test.
 
-## Web export
+## Web export and deploy (to samwbush.com, on Netlify)
 
-Same as frog-hopper: `mkdir -p build/web`, then
-`"/Applications/Godot.app/Contents/MacOS/Godot" --headless --path . --export-release "Web" build/web/index.html`.
-`assets/source/` and `tools/` are excluded from the export. (Export ran cleanly on 2026-11-21; the exported build has not yet been played in a browser.)
+The game is published at **https://samwbush.com/sannydoo/** from the site repo
+`~/repos/_personal/samwbush.com` (GitHub `Jikodis/samwbush.com`, private, plain static
+site, Netlify project `samwbush` publishes the repo root on every push to `main`).
+
+1. `mkdir -p build/web`, then
+   `"/Applications/Godot.app/Contents/MacOS/Godot" --headless --path . --export-release "Web" build/web/index.html`
+   (needs the 4.7.2 export templates, already installed). `assets/source/` and `tools/` are excluded.
+2. Test locally: `python3 -m http.server 8000 --directory build/web`, open http://localhost:8000.
+3. Copy into the site repo: `cp -R build/web/. ~/repos/_personal/samwbush.com/sannydoo/`
+4. Commit and push the **samwbush.com** repo to `main`; Netlify publishes it.

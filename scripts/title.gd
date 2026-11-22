@@ -72,6 +72,10 @@ func _draw() -> void:
 	Ink.line(self, Vector2(0, 712), Vector2(1280, 712), 3.0, Ink.INK, 5)
 	var help := "Free Fly: arrows to fly, Space or X to shoot" if Game.flight_mode == "free" else "Flappy: Space to flap, arrows steer, X shoots"
 	Ink.rect(self, Rect2(740, 470, 420, 118), 2.5, Ink.INK, 6, Color(0.98, 0.96, 0.9, 0.95))
+	var line2 := "1 2 3 4 = magic     Esc = pause"
+	if Game.uses_touch():
+		help = "Slide your left thumb to fly, tap SHOOT" if Game.flight_mode == "free" else "Tap FLAP to fly up, left thumb steers"
+		line2 = "Tap the magic boxes to cast,  || to pause"
 	Ink.text(self, Vector2(950, 504), help, 22, Ink.INK)
-	Ink.text(self, Vector2(950, 536), "1 2 3 4 = magic     Esc = pause", 22, Ink.INK)
+	Ink.text(self, Vector2(950, 536), line2, 22, Ink.INK)
 	Ink.text(self, Vector2(950, 568), "Shoot right on the beat for double damage!", 22, Color(0.55, 0.2, 0.75))
