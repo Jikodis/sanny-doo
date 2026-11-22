@@ -12,7 +12,7 @@ crayon color only inside shapes.
 
 ## How we work
 
-- Personal repo. **Landing rule NOT YET DECIDED** (asked 2026-11-21): straight to `main` like frog-hopper, or pull requests. Until answered, work stays on a branch. Once decided, replace this line. An AI session works in `.worktrees/<name>`, rebases onto `origin/main`, pushes with `git push origin <branch>:main`, then removes the worktree folder and branch.
+- Personal repo. **Commits go straight to `main`, no pull requests** (decided 2026-11-21). An AI session works in `.worktrees/<name>`, rebases onto `origin/main`, pushes with `git push origin <branch>:main`, then removes the worktree folder and branch. An AI session works in `.worktrees/<name>`, rebases onto `origin/main`, pushes with `git push origin <branch>:main`, then removes the worktree folder and branch.
 - The AI writes `.gd`, `.tscn` and `project.godot` directly. The human opens the project in Godot, presses **F5**, and playtests with Sam.
 - Almost everything is built in code: scenes are a single root node with a script. Entities (monsters, spikes, coins) are plain `Node2D` scripts created with `preload(...).new()`.
 - Scripts reference each other with `const X = preload("res://scripts/x.gd")`, not `class_name`, so the game runs without an editor-built class cache.
@@ -31,6 +31,7 @@ crayon color only inside shapes.
 | `scripts/sfx.gd` | Autoload: sound effects made from math |
 | `scripts/level.gd` | Builds and runs a level from `Game.LEVELS`; collisions; boss start |
 | `scripts/player.gd` | Sanny: both flying styles, shooting, magic, getting hurt |
+| `scripts/touch_controls.gd` | Phone/tablet controls (slide-to-fly stick, SHOOT/FLAP buttons, tap magic boxes, pause); shown only on touch screens |
 | `scripts/smoke.gd` | Automated playthrough and screenshots (see below) |
 
 ## Adding a new drawing from Sam
@@ -51,7 +52,7 @@ Photo it on plain paper, copy it to `assets/source/`, add a function in
    "/Applications/Godot.app/Contents/MacOS/Godot" --headless --path . --fixed-fps 60 -- --smoke
    ```
    Must print `SMOKE PASS`. It uses its own save file, so it never touches Sam's save.
-2. **Screenshots** (opens a window for a few seconds):
+2. **Screenshots** (opens a window for a few seconds). Add `--touch` to show the phone controls, or `--touchcheck` (with `--resolution 800x450` before `--`) to test touch input in a window smaller than the game:
    `"/Applications/Godot.app/Contents/MacOS/Godot" --path . -- --shots --out=<folder>`
 3. **Playing it.** Nothing automated checks whether flying feels good or whether Sam
    likes it. That is the real test.

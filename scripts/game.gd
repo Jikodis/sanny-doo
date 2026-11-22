@@ -86,6 +86,8 @@ var just_won := false
 var smoke_autopilot := false  # the automated test flies Sanny by itself
 var smoke_casts := 0
 var font: Font
+var touch_seen := false   # a finger touched the screen, so show phone controls
+var force_touch := false  # "--touch" on the command line shows them on a computer
 var _boil_t := 0.0
 
 
@@ -98,6 +100,8 @@ func _ready() -> void:
 		SAVE_PATH = "user://sanny_doo_test_save.json"
 	load_game()
 	var args := OS.get_cmdline_user_args()
+	force_touch = "--touch" in args
+	add_child(_RotateHint.new())
 	if "--smoke" in args or "--shots" in args:
 		add_child(preload("res://scripts/smoke.gd").new())
 
@@ -108,6 +112,42 @@ func _process(delta: float) -> void:
 	if _boil_t > 0.14:
 		_boil_t = 0.0
 		Ink.boil += 1
+
+
+## True on phones and tablets (or once a finger has touched the screen).
+func uses_touch() -> bool:
+	return touch_seen or force_touch or DisplayServer.is_touchscreen_available()
+
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		touch_seen = true
+
+
+## On a phone held upright, asks the player to turn it sideways.
+class _RotateHint:
+	extends CanvasLayer
+	var _c: Control
+
+	func _ready() -> void:
+		layer = 100
+		_c = Control.new()
+		_c.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_c.draw.connect(_paint)
+		add_child(_c)
+
+	func _process(_d: float) -> void:
+		var s := DisplayServer.window_get_size()
+		var show: bool = Game.uses_touch() and s.y > s.x
+		_c.visible = show
+		if show:
+			_c.queue_redraw()
+
+	func _paint() -> void:
+		_c.draw_rect(Rect2(0, 0, 1280, 720), Ink.PAPER)
+		Ink.text(_c, Vector2(640, 330), "Turn your phone sideways", 80)
+		Ink.text(_c, Vector2(640, 420), "to play Sanny Doo!", 56, Ink.FADED)
 
 
 # ---------------------------------------------------------------- stats

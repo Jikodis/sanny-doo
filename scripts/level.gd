@@ -40,6 +40,7 @@ var arena_x := 0.0
 var player
 var boss
 var hud: CanvasLayer
+var touch: CanvasLayer
 var world: Node2D
 var rng := RandomNumberGenerator.new()
 var _cam: Camera2D
@@ -92,6 +93,9 @@ func _ready() -> void:
 	hud = Hud.new()
 	hud.level = self
 	add_child(hud)
+	touch = preload("res://scripts/touch_controls.gd").new()
+	touch.level = self
+	add_child(touch)
 	Music.play_track(str(data["music"]))
 	_cam.position = Vector2(cam_x, 0)
 

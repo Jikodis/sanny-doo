@@ -16,6 +16,8 @@ King Grumble at the end.
 | Free Fly (default) | Arrows/WASD fly in any direction; Space or X shoots | Easier; good for younger players |
 | Flappy | Space or Up flaps, gravity pulls down; left/right moves; X shoots | Harder, more skill |
 
+On phones and tablets: slide your left thumb anywhere on the left side to fly, hold SHOOT on the right (Flappy adds a FLAP button), tap the magic boxes to cast, and the || button pauses. Holding the phone upright shows "Turn your phone sideways".
+
 The screen scrolls right by itself. Ground is safe to touch; spikes and monsters are not.
 
 ## Levels

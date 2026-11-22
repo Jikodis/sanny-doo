@@ -204,5 +204,7 @@ class HudDraw:
 		if level.state == "intro":
 			Ink.text(self, Vector2(640, 300), "Level %d: %s" % [level.index + 1, level.data["name"]], 60)
 			var hint := "Arrows to fly, Space or X to shoot" if Game.flight_mode == "free" else "Space to flap, X to shoot"
+			if Game.uses_touch():
+				hint = "Left thumb: slide to fly.  Right thumb: SHOOT" if Game.flight_mode == "free" else "Tap FLAP to fly up, slide left thumb to steer, SHOOT"
 			Ink.text(self, Vector2(640, 360), hint, 32, Ink.FADED)
 			Ink.text(self, Vector2(640, 420), "Ready... FLY!" if level.intro_t < 1.0 else "Ready...", 44)

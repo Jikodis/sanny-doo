@@ -124,6 +124,62 @@ func _wait_for_level(index: int) -> Variant:
 	return null
 
 
+## Game pixels (1280x720) to window pixels, like a real finger on the glass.
+func _to_window(pos: Vector2) -> Vector2:
+	return get_tree().root.get_final_transform() * pos
+
+
+func _touch(finger: int, pos: Vector2, down: bool) -> void:
+	var e := InputEventScreenTouch.new()
+	e.index = finger
+	e.position = _to_window(pos)
+	e.pressed = down
+	Input.parse_input_event(e)
+
+
+func _drag(finger: int, pos: Vector2) -> void:
+	var e := InputEventScreenDrag.new()
+	e.index = finger
+	e.position = _to_window(pos)
+	Input.parse_input_event(e)
+
+
+## Phone controls: slide to fly, SHOOT button, magic boxes, pause button.
+## scale = window size / game size (to check touches are mapped to game pixels).
+func _touch_paths(lv, scale: float) -> void:
+	var p = lv.player
+	p.position = Vector2(lv.cam_x + 300.0, 360.0)
+	var x0: float = p.position.x - lv.cam_x
+	_touch(0, Vector2(300, 400) * scale, true)
+	await _frames(2)
+	_drag(0, Vector2(400, 400) * scale)
+	await get_tree().create_timer(0.5).timeout
+	_check(p.position.x - lv.cam_x > x0 + 60.0, "touch: sliding right flies right (%.0f px)" % (p.position.x - lv.cam_x - x0))
+	_touch(0, Vector2(380, 400) * scale, false)
+	await _frames(2)
+	_check(not Input.is_action_pressed("move_right"), "touch: letting go stops")
+	for b in get_tree().get_nodes_in_group("player_bullet"):
+		b.queue_free()
+	await _frames(1)
+	_touch(1, Vector2(1150, 520) * scale, true)
+	await _frames(10)
+	_check(get_tree().get_nodes_in_group("player_bullet").size() > 0, "touch: SHOOT button shoots")
+	_touch(1, Vector2(1150, 520) * scale, false)
+	p.mana = 99.0
+	p.hp = 1
+	_touch(2, Vector2(60, 670) * scale, true)
+	await _frames(2)
+	_touch(2, Vector2(60, 670) * scale, false)
+	await _frames(2)
+	_check(p.hp == 3, "touch: tapping magic box 1 casts Heal")
+	_touch(3, Vector2(1236, 122) * scale, true)
+	await _frames(2)
+	_touch(3, Vector2(1236, 122) * scale, false)
+	_check(get_tree().paused, "touch: pause button pauses")
+	lv.hud.toggle_pause()
+	await _frames(2)
+
+
 ## The paths a real player takes, using real key presses and real buttons.
 func _player_paths() -> void:
 	print("SMOKE: player paths")
@@ -178,6 +234,9 @@ func _player_paths() -> void:
 		if m.position.x > lv.cam_x + 700.0 and m.position.x < lv.cam_x + 1000.0:
 			blobs_left += 1
 	_check(blobs_left == 0, "flood washes away a monster")
+	Game.force_touch = true
+	lv.touch.visible = true
+	await _touch_paths(lv, 1.0)
 	# Pause with Esc, switch flying style with the button.
 	await _tap(KEY_ESCAPE)
 	_check(get_tree().paused, "Esc pauses")
@@ -262,6 +321,28 @@ func _shots(args: PackedStringArray) -> void:
 		if a.begins_with("--out="):
 			dir = a.substr(6)
 	DirAccess.make_dir_recursive_absolute(dir)
+	if "--touchcheck" in args:
+		# Window is smaller than the game here, so this checks touch scaling.
+		Game.force_touch = true
+		Game.new_game()
+		Game.spells = ["heal"]
+		Game.start_level(0)
+		await _frames(10)
+		var tl = get_tree().current_scene
+		tl.intro_t = 0.0
+		tl.player.god_mode = true
+		await _frames(5)
+		var sc := 1.0
+		print("window ", DisplayServer.window_get_size(), " transform ", get_tree().root.get_final_transform())
+		await _touch_paths(tl, sc)
+		_touch(0, Vector2(300, 400) * sc, true)
+		_drag(0, Vector2(350, 360) * sc)
+		_touch(1, Vector2(1150, 520) * sc, true)
+		await _frames(10)
+		await _shot(dir, "40_touch_controls")
+		print("TOUCHCHECK PASS" if _fails.is_empty() else "TOUCHCHECK FAIL: %s" % ", ".join(_fails))
+		get_tree().quit(0)
+		return
 	get_tree().change_scene_to_file("res://scenes/title.tscn")
 	await _frames(30)
 	await _shot(dir, "01_title")
