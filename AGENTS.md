@@ -12,7 +12,7 @@ crayon color only inside shapes.
 
 ## How we work
 
-- Personal repo. **Commits go straight to `main`, no pull requests** (assumed 2026-11-21 to match frog-hopper; change this line if that is wrong). An AI session works in `.worktrees/<name>`, rebases onto `origin/main`, pushes with `git push origin <branch>:main`, then removes the worktree folder and branch.
+- Personal repo. **Landing rule NOT YET DECIDED** (asked 2026-11-21): straight to `main` like frog-hopper, or pull requests. Until answered, work stays on a branch. Once decided, replace this line. An AI session works in `.worktrees/<name>`, rebases onto `origin/main`, pushes with `git push origin <branch>:main`, then removes the worktree folder and branch.
 - The AI writes `.gd`, `.tscn` and `project.godot` directly. The human opens the project in Godot, presses **F5**, and playtests with Sam.
 - Almost everything is built in code: scenes are a single root node with a script. Entities (monsters, spikes, coins) are plain `Node2D` scripts created with `preload(...).new()`.
 - Scripts reference each other with `const X = preload("res://scripts/x.gd")`, not `class_name`, so the game runs without an editor-built class cache.
@@ -60,4 +60,4 @@ Photo it on plain paper, copy it to `assets/source/`, add a function in
 
 Same as frog-hopper: `mkdir -p build/web`, then
 `"/Applications/Godot.app/Contents/MacOS/Godot" --headless --path . --export-release "Web" build/web/index.html`.
-`assets/source/` and `tools/` are excluded from the export.
+`assets/source/` and `tools/` are excluded from the export. (Export ran cleanly on 2026-11-21; the exported build has not yet been played in a browser.)

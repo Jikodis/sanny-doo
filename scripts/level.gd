@@ -279,11 +279,6 @@ func _physics_process(delta: float) -> void:
 	_cam.position = Vector2(cam_x, 0) + off
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("pause") and (state == "play" or state == "boss" or state == "intro"):
-		hud.toggle_pause()
-
-
 func _collide() -> void:
 	var p: Vector2 = player.hit_center()
 	var pr: float = player.HIT_RADIUS

@@ -54,6 +54,7 @@ Each level has a checkpoint halfway. Dying keeps your coins and restarts at the 
 
 - Sanny Doo and the house are Sam's actual drawings, cut out of the photos by `tools/extract_ink.gd`. Sanny's wings are separate pieces so they flap.
 - Everything else (monsters, spikes, coins, buttons) is drawn in code with wobbly pen lines in the same style, with faces like Sam's (oval eyes, big open mouth).
+- Assumption to check: Sam's drawings are pen only, but monsters, coins, hearts and the boss get light crayon-color fills so a child can tell them apart at a glance. Easy to switch to pen only.
 - Font: Patrick Hand (SIL Open Font License, `assets/fonts/OFL.txt`).
 
 ## Open questions for after the first playtest

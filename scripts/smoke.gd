@@ -43,6 +43,9 @@ func _smoke() -> void:
 	print("SMOKE: start")
 	Game.new_game()
 	await _frames(5)
+	await _player_paths()
+	Game.new_game()
+	Game.last_completed = -1
 	get_tree().change_scene_to_file("res://scenes/title.tscn")
 	await _frames(10)
 	get_tree().change_scene_to_file("res://scenes/hub.tscn")
@@ -74,6 +77,176 @@ func _smoke() -> void:
 	Game.smoke_autopilot = false
 	print("SMOKE PASS" if _fails.is_empty() else "SMOKE FAIL: %s" % ", ".join(_fails))
 	get_tree().quit(0 if _fails.is_empty() else 1)
+
+
+# ---------------------------------------------------------------- helpers for real-player paths
+func _key(code: Key, down: bool) -> void:
+	var e := InputEventKey.new()
+	e.physical_keycode = code
+	e.keycode = code
+	e.pressed = down
+	Input.parse_input_event(e)
+
+
+func _tap(code: Key) -> void:
+	_key(code, true)
+	await _frames(2)
+	_key(code, false)
+	await _frames(1)
+
+
+## Finds a pen button by its text anywhere under node.
+func _button(node: Node, text: String):
+	if "label" in node and str(node.get("label")).begins_with(text) and node is Button:
+		return node
+	for c in node.get_children():
+		var found = _button(c, text)
+		if found:
+			return found
+	return null
+
+
+func _has_label(node: Node, text: String) -> bool:
+	if node is Label and (node as Label).text.contains(text):
+		return true
+	for c in node.get_children():
+		if _has_label(c, text):
+			return true
+	return false
+
+
+func _wait_for_level(index: int) -> Variant:
+	for i in 60:
+		await _frames(1)
+		var sc = get_tree().current_scene
+		if sc and "index" in sc and sc.index == index and sc.player != null:
+			return sc
+	return null
+
+
+## The paths a real player takes, using real key presses and real buttons.
+func _player_paths() -> void:
+	print("SMOKE: player paths")
+	Game.spells = Game.SPELL_ORDER.duplicate()
+	# Flappy: a real Space press makes Sanny flap upward.
+	Game.flight_mode = "flap"
+	Game.start_level(0)
+	var lv = await _wait_for_level(0)
+	_check(lv != null, "level 1 loads")
+	lv.intro_t = 0.0
+	await _frames(30)
+	_key(KEY_SPACE, true)
+	await _frames(2)
+	_check(lv.player.vel.y < 0.0, "flappy: Space key flaps up (vel.y %.0f)" % lv.player.vel.y)
+	_key(KEY_SPACE, false)
+	# Free fly: holding the right arrow moves right.
+	Game.flight_mode = "free"
+	lv.player.position.x = lv.cam_x + 220.0
+	var x0: float = lv.player.position.x - lv.cam_x
+	_key(KEY_RIGHT, true)
+	await _frames(40)
+	_key(KEY_RIGHT, false)
+	_check(lv.player.position.x - lv.cam_x > x0 + 60.0, "free fly: right arrow moves right (%.0f px)" % (lv.player.position.x - lv.cam_x - x0))
+	# Shooting with X makes a shot.
+	_key(KEY_X, true)
+	await _frames(2)
+	_key(KEY_X, false)
+	_check(get_tree().get_nodes_in_group("player_bullet").size() > 0, "X key shoots")
+	# Each spell does its job.
+	var p = lv.player
+	p.mana = 99.0
+	p.hp = 1
+	p.cast("heal")
+	_check(p.hp == 3, "heal gives +2 hearts")
+	p.cast("poison")
+	await _frames(1)
+	var clouds := 0
+	for n in lv.world.get_children():
+		if "kind" in n and n.kind == "poison" and n.has_method("_front_x"):
+			clouds += 1
+	_check(clouds == 1, "poison makes a cloud")
+	p.position = Vector2(lv.cam_x + 200.0, 360.0)
+	p.vel = Vector2.ZERO
+	p.cast("teleport")
+	_check(p.position.x - lv.cam_x > 400.0, "teleport moves Sanny ahead")
+	lv.spawn_monster("blob", Vector2(lv.cam_x + 900.0, 300.0))
+	await _frames(2)
+	p.cast("flood")
+	await _frames(120)
+	var blobs_left := 0
+	for m in get_tree().get_nodes_in_group("monster"):
+		if m.position.x > lv.cam_x + 700.0 and m.position.x < lv.cam_x + 1000.0:
+			blobs_left += 1
+	_check(blobs_left == 0, "flood washes away a monster")
+	# Pause with Esc, switch flying style with the button.
+	await _tap(KEY_ESCAPE)
+	_check(get_tree().paused, "Esc pauses")
+	var sw = _button(lv.hud, "Switch flying style")
+	_check(sw != null, "pause menu has the switch button")
+	if sw:
+		sw.pressed.emit()
+	await _frames(2)
+	_check(not get_tree().paused and Game.flight_mode == "flap", "switch style unpauses and changes to flappy")
+	await _tap(KEY_ESCAPE)
+	await _tap(KEY_ESCAPE)
+	_check(not get_tree().paused, "Esc twice pauses and unpauses")
+	Game.flight_mode = "free"
+	# Pass the checkpoint, then die: Try again starts at the checkpoint.
+	lv.cam_x = lv.checkpoint_x - 600.0
+	lv.player.position = Vector2(lv.checkpoint_x + 10.0, 360.0)
+	await _frames(3)
+	_check(Game.checkpoint_level == 0, "checkpoint reached")
+	for i in 20:
+		lv.player.invincible = 0.0
+		lv.player.hurt(1)
+	await _frames(150)
+	var again = _button(lv.hud, "Try again")
+	_check(again != null and not again.disabled, "fail panel shows Try again")
+	if again:
+		again.pressed.emit()
+	lv = await _wait_for_level(0)
+	_check(lv != null and absf(lv.cam_x - (Game.checkpoint_x - 300.0)) < 1.0 and not lv.player.dead, "retry restarts alive at the checkpoint")
+	Game.spells.erase("heal")  # so finishing level 1 teaches it again
+	# Finish the level: tapping Space at the finish must not skip the panel.
+	lv.intro_t = 0.0
+	await _frames(2)
+	lv.cam_x = lv.length - 1280.0
+	lv.player.position = Vector2(lv.finish_x + 5.0, 360.0)
+	await _frames(2)
+	_check(lv.state == "done", "reaching the flag finishes the level")
+	for i in 5:
+		await _tap(KEY_SPACE)
+		await _tap(KEY_ENTER)
+	_check(get_tree().current_scene == lv, "Space/Enter taps do not skip the complete panel")
+	_check(_has_label(lv.hud, "New magic learned: Heal"), "complete panel says Heal was learned")
+	await _frames(40)
+	var next = _button(lv.hud, "Next level")
+	_check(next != null and not next.disabled, "Next level button works after a moment")
+	if next:
+		next.pressed.emit()
+	var lv2 = await _wait_for_level(1)
+	_check(lv2 != null, "Next level loads level 2")
+	# Shop through the real buttons.
+	Game.coins = 100
+	Game.goto_hub()
+	await _frames(5)
+	var hub = get_tree().current_scene
+	var shop_b = _button(hub, "Shop")
+	if shop_b:
+		shop_b.pressed.emit()
+	await _frames(2)
+	var buy = _button(hub, "Buy  25")
+	_check(buy != null and not buy.disabled, "shop shows the Ink Blaster for 25")
+	if buy:
+		buy.pressed.emit()
+	await _frames(2)
+	_check(Game.weapon == 1 and Game.coins == 75, "buying with the button works")
+	# Victory screen after the boss.
+	Game.just_won = true
+	Game.goto_hub()
+	await _frames(5)
+	_check(_has_label(get_tree().current_scene, "The End"), "victory message shows at the house")
+	Game.just_won = false
 
 
 func _shot(dir: String, name: String) -> void:
@@ -122,4 +295,65 @@ func _shots(args: PackedStringArray) -> void:
 	lv.player.cast("poison")
 	await _frames(20)
 	await _shot(dir, "21_boss_poison")
+	# Stormy Sky with the best gear: beat-spikes, Thunder Pen, Knight Armor, Flood
+	Game.armor = 3
+	Game.weapon = 3
+	Game.spells = Game.SPELL_ORDER.duplicate()
+	Game.start_level(3)
+	await _frames(5)
+	var sky = get_tree().current_scene
+	sky.intro_t = 0.0
+	sky.player.god_mode = true
+	for h in get_tree().get_nodes_in_group("hazard"):
+		if h.kind == "beat_spikes":
+			sky.cam_x = h.position.x - 700.0
+			break
+	sky.player.position = Vector2(sky.cam_x + 250.0, 400.0)
+	_key(KEY_X, true)
+	await _frames(25)
+	await _shot(dir, "30_sky_thunder_beatspikes")
+	_key(KEY_X, false)
+	sky.player.mana = 99.0
+	sky.player.cast("flood")
+	await _frames(40)
+	await _shot(dir, "31_flood")
+	await _tap(KEY_ESCAPE)
+	await _frames(5)
+	await _shot(dir, "32_pause")
+	await _tap(KEY_ESCAPE)
+	sky.cam_x = sky.length - 1280.0
+	sky.player.position = Vector2(sky.cam_x + 300.0, 400.0)
+	await _frames(10)
+	await _shot(dir, "33_finish_flag")
+	Game.spells.erase("flood")
+	sky.player.position = Vector2(sky.finish_x + 5.0, 400.0)
+	await _frames(70)
+	await _shot(dir, "34_complete_panel")
+	# Cardboard armor, Ink Blaster, then the fail panel
+	Game.armor = 1
+	Game.weapon = 1
+	Game.start_level(1)
+	await _frames(5)
+	var fl = get_tree().current_scene
+	fl.intro_t = 0.0
+	await _frames(30)
+	_key(KEY_X, true)
+	await _frames(20)
+	await _shot(dir, "35_cardboard_inkblaster")
+	_key(KEY_X, false)
+	for i in 20:
+		fl.player.invincible = 0.0
+		fl.player.hurt(1)
+	await _frames(150)
+	await _shot(dir, "36_fail_panel")
+	Game.weapon = 2
+	Game.start_level(0)
+	await _frames(5)
+	var l0 = get_tree().current_scene
+	l0.intro_t = 0.0
+	await _frames(30)
+	_key(KEY_X, true)
+	await _frames(20)
+	await _shot(dir, "37_star_wand")
+	_key(KEY_X, false)
 	get_tree().quit(0)

@@ -20,7 +20,7 @@ func _ready() -> void:
 	Music.play_track("title")
 
 	var v := VBoxContainer.new()
-	v.position = Vector2(760, 220)
+	v.position = Vector2(760, 210)
 	v.add_theme_constant_override("separation", 12)
 	add_child(v)
 	var play = Ui.button("Play" if Game.has_save() else "Start", _play, Vector2(380, 64))
@@ -70,7 +70,8 @@ func _draw() -> void:
 	for i in 6:
 		Ink.tree(self, 80 + i * 230, 712, 70 + (i * 37) % 90, 34 + (i * 13) % 24, 40 + i, Ink.INK, 3.0)
 	Ink.line(self, Vector2(0, 712), Vector2(1280, 712), 3.0, Ink.INK, 5)
-	var help := "Free Fly: arrows to fly, Space or X to shoot" if Game.flight_mode == "free" else "Flappy: Space or Up to flap, arrows left/right, X to shoot"
-	Ink.text(self, Vector2(950, 420), help, 24, Ink.INK)
-	Ink.text(self, Vector2(950, 452), "1 2 3 4 = magic     Esc = pause", 24, Ink.INK)
-	Ink.text(self, Vector2(950, 484), "Shoot right on the beat for double damage!", 24, Color(0.55, 0.2, 0.75))
+	var help := "Free Fly: arrows to fly, Space or X to shoot" if Game.flight_mode == "free" else "Flappy: Space to flap, arrows steer, X shoots"
+	Ink.rect(self, Rect2(740, 470, 420, 118), 2.5, Ink.INK, 6, Color(0.98, 0.96, 0.9, 0.95))
+	Ink.text(self, Vector2(950, 504), help, 22, Ink.INK)
+	Ink.text(self, Vector2(950, 536), "1 2 3 4 = magic     Esc = pause", 22, Ink.INK)
+	Ink.text(self, Vector2(950, 568), "Shoot right on the beat for double damage!", 22, Color(0.55, 0.2, 0.75))

@@ -24,6 +24,15 @@ func _process(_delta: float) -> void:
 	_draw_node.queue_redraw()
 
 
+## Esc/P pauses and unpauses. This lives in the HUD because the HUD keeps
+## running while the game is paused (the level does not).
+func _unhandled_input(event: InputEvent) -> void:
+	var st: String = level.state
+	if event.is_action_pressed("pause") and (st == "play" or st == "boss" or st == "intro"):
+		get_viewport().set_input_as_handled()
+		toggle_pause()
+
+
 # ---------------------------------------------------------------- panels
 func _clear_panel() -> void:
 	if _panel_root:
@@ -80,7 +89,7 @@ func show_complete(learned: String) -> void:
 	if next < Game.LEVELS.size():
 		buttons.append(Ui.button("Next level", func(): Game.start_level(next)))
 	Ui.row(v, buttons)
-	buttons[-1].grab_focus.call_deferred()
+	_arm(buttons, buttons[-1])
 
 
 func show_fail() -> void:
@@ -89,8 +98,25 @@ func show_fail() -> void:
 	v.add_child(Ui.label("You keep your coins. Try again %s?" % cp, 28))
 	v.add_child(Ui.label("Tip: buy armor or hearts at the house shop.", 24, Color(0.35, 0.35, 0.4)))
 	var again = Ui.button("Try again", func(): Game.start_level(level.index))
-	Ui.row(v, [again, Ui.button("Back to the house", Game.goto_hub)])
-	again.grab_focus.call_deferred()
+	var home = Ui.button("Back to the house", Game.goto_hub)
+	Ui.row(v, [again, home])
+	_arm([again, home], again)
+
+
+## Buttons on the end-of-level panels wait a moment before they work, so a
+## Space or X tap that was meant as a shot doesn't skip the panel.
+const PANEL_LOCK_TIME := 0.8
+
+
+func _arm(buttons: Array, focus_button) -> void:
+	for b in buttons:
+		b.disabled = true
+	await get_tree().create_timer(PANEL_LOCK_TIME, true).timeout
+	for b in buttons:
+		if is_instance_valid(b):
+			b.disabled = false
+	if is_instance_valid(focus_button):
+		focus_button.grab_focus()
 
 
 ## Draws everything on the HUD each frame.
